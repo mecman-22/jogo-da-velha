@@ -1,0 +1,1024 @@
+<!--
+  Jogo da Velha
+  © 2026 Mec Produções. Todos os direitos reservados.
+-->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="author" content="Mec Produções">
+<meta name="copyright" content="© 2026 Mec Produções. Todos os direitos reservados.">
+<meta name="theme-color" content="#12060f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Velha">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Jogo da Velha</title>
+<style>
+  /* ---------- temas ---------- */
+  :root, body[data-tema="fogo"] {
+    --bg1:#12060f; --bg2:#2a0b1f; --glow1:#6b1d3f; --glow2:#7a3306;
+    --x:#ffb703; --o:#ff2e63; --accent:#ff6b35; --accent2:#ff2e63; --win:#ffd60a;
+    --txt:#fff4ea; --mut:#d1a9a0; --card:rgba(255,255,255,.07); --card-b:rgba(255,220,200,.16);
+  }
+  body[data-tema="neon"] {
+    --bg1:#0b0d17; --bg2:#151a33; --glow1:#1d2150; --glow2:#3a1550;
+    --x:#22d3ee; --o:#f43f8e; --accent:#8b5cf6; --accent2:#6366f1; --win:#4ade80;
+    --txt:#eef0ff; --mut:#9aa0c3; --card:rgba(255,255,255,.06); --card-b:rgba(255,255,255,.12);
+  }
+  body[data-tema="doce"] {
+    --bg1:#150a2e; --bg2:#2b1352; --glow1:#4a1d7a; --glow2:#0e5a5a;
+    --x:#3dffb5; --o:#ff5fd2; --accent:#ffd23f; --accent2:#ff9f1c; --win:#ffe94d;
+    --txt:#fbf4ff; --mut:#b9a6d8; --card:rgba(255,255,255,.07); --card-b:rgba(255,255,255,.15);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { height: 100%; }
+  body {
+    margin: 0; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center;
+    padding: max(14px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; color: var(--txt);
+    background: radial-gradient(1200px 800px at 15% 8%, var(--glow1) 0%, transparent 60%),
+                radial-gradient(1000px 700px at 90% 95%, var(--glow2) 0%, transparent 55%),
+                linear-gradient(160deg, var(--bg1), var(--bg2));
+    background-attachment: fixed;
+    overflow-x: hidden; touch-action: manipulation; -webkit-user-select: none; user-select: none;
+    transition: background .4s;
+  }
+  input { -webkit-user-select: text; user-select: text; }
+
+  #bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+  .float { position: absolute; font-weight: 800; opacity: .07; animation: subir linear infinite; }
+  @keyframes subir { from { transform: translateY(110vh) rotate(0deg); } to { transform: translateY(-20vh) rotate(360deg); } }
+
+  .tela {
+    position: relative; z-index: 1; width: min(100%, 460px); margin: auto 0;
+    display: none; flex-direction: column; align-items: center; gap: 16px;
+    padding: 26px 22px; border-radius: 26px;
+    background: var(--card); border: 1px solid var(--card-b);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 30px 80px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .tela.ativa { display: flex; animation: entrar .45s cubic-bezier(.2,.9,.3,1.2); }
+  @keyframes entrar { from { opacity: 0; transform: translateY(24px) scale(.96); } to { opacity: 1; transform: none; } }
+
+  .logo { display: grid; grid-template-columns: repeat(3, 34px); gap: 5px; }
+  .logo span { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: rgba(255,255,255,.08); font-weight: 800; font-size: 1.3rem; }
+  .logo .x { color: var(--x); text-shadow: 0 0 14px var(--x); }
+  .logo .o { color: var(--o); text-shadow: 0 0 14px var(--o); }
+
+  h1 {
+    margin: 0; font-size: 2.2rem; letter-spacing: 2px; text-transform: uppercase; text-align: center;
+    background: linear-gradient(90deg, var(--x), var(--accent), var(--o));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .sub { margin: -6px 0 0; color: var(--mut); font-size: .95rem; text-align: center; }
+  h2 { margin: 0; font-size: 1.3rem; text-align: center; }
+
+  .btn {
+    width: 100%; padding: 15px 18px; border: 1px solid var(--card-b); border-radius: 14px;
+    background: rgba(255,255,255,.08); color: var(--txt); font-size: 1.05rem; font-weight: 600;
+    cursor: pointer; transition: transform .12s, background .2s, box-shadow .2s, border-color .2s; font-family: inherit;
+  }
+  .btn:hover { transform: translateY(-2px); background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.32); }
+  .btn:active { transform: translateY(0) scale(.97); }
+  .btn:disabled { opacity: .6; cursor: default; transform: none; }
+  .btn.primario {
+    background: linear-gradient(90deg, var(--accent), var(--accent2)); border-color: transparent; color: #fff;
+    box-shadow: 0 10px 30px color-mix(in srgb, var(--accent) 50%, transparent);
+    text-shadow: 0 1px 2px rgba(0,0,0,.25);
+  }
+  .btn.primario:hover { filter: brightness(1.12); box-shadow: 0 14px 36px color-mix(in srgb, var(--accent) 70%, transparent); }
+  .btn small { display: block; margin-top: 3px; font-weight: 400; color: var(--mut); font-size: .8rem; }
+  .btn.primario small { color: rgba(255,255,255,.85); }
+  .btn.pequeno { padding: 10px 14px; font-size: .9rem; width: auto; }
+
+  .grupo { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+  .grupo > label { color: var(--mut); font-size: .78rem; text-transform: uppercase; letter-spacing: 1.5px; }
+  .opcoes { display: flex; gap: 8px; }
+  .opcoes .op {
+    flex: 1; padding: 11px 6px; border-radius: 12px; border: 1px solid var(--card-b);
+    background: rgba(255,255,255,.06); color: var(--txt); font-family: inherit; font-size: .95rem; cursor: pointer; transition: all .15s;
+  }
+  .opcoes .op:hover { background: rgba(255,255,255,.13); }
+  .opcoes .op.sel { background: color-mix(in srgb, var(--accent) 30%, transparent); border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .opcoes .op.simx.sel { background: color-mix(in srgb, var(--x) 22%, transparent); border-color: var(--x); box-shadow: 0 0 0 1px var(--x) inset; color: var(--x); }
+  .opcoes .op.simo.sel { background: color-mix(in srgb, var(--o) 22%, transparent); border-color: var(--o); box-shadow: 0 0 0 1px var(--o) inset; color: var(--o); }
+  .opcoes .op.simx, .opcoes .op.simo { font-size: 1.4rem; font-weight: 800; }
+  input.nome {
+    width: 100%; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--card-b);
+    background: rgba(0,0,0,.28); color: var(--txt); font-size: 16px; font-family: inherit; outline: none;
+  }
+  input.nome:focus { border-color: var(--accent); }
+  .linha-nomes { display: flex; gap: 8px; width: 100%; }
+
+  /* perfil / nivel */
+  .perfil { width: 100%; padding: 12px 14px; border-radius: 16px; background: rgba(0,0,0,.25); border: 1px solid var(--card-b); }
+  .p-topo { display: flex; justify-content: space-between; font-size: .95rem; margin-bottom: 8px; }
+  .p-topo b { color: var(--x); font-size: 1.15rem; }
+  .barra { height: 10px; border-radius: 6px; background: rgba(255,255,255,.1); overflow: hidden; }
+  .barra i { display: block; height: 100%; width: 0%; border-radius: 6px; background: linear-gradient(90deg, var(--x), var(--o)); transition: width .6s cubic-bezier(.2,.9,.3,1.1); }
+  .p-xp { margin-top: 6px; font-size: .75rem; color: var(--mut); }
+
+  .menu-rodape { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .temas { display: flex; gap: 8px; }
+  .sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
+  .sw.sel { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,.25); }
+  .sw[data-t="fogo"] { background: linear-gradient(135deg, #ffb703, #ff2e63); }
+  .sw[data-t="neon"] { background: linear-gradient(135deg, #22d3ee, #f43f8e); }
+  .sw[data-t="doce"] { background: linear-gradient(135deg, #3dffb5, #ff5fd2); }
+  .toggle { padding: 8px 12px; border-radius: 10px; border: 1px solid var(--card-b); background: rgba(255,255,255,.07); color: var(--txt); font-family: inherit; font-size: .85rem; cursor: pointer; }
+
+  /* jogo */
+  .topo { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  #j-seq { font-size: .85rem; color: var(--x); font-weight: 700; }
+  .placar { width: 100%; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .pbox { text-align: center; padding: 9px 6px; border-radius: 14px; background: rgba(255,255,255,.07); border: 1px solid transparent; transition: all .25s; min-width: 0; }
+  .pbox .n { font-size: .72rem; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pbox .v { font-size: 1.6rem; font-weight: 800; line-height: 1.2; }
+  .pbox.x .v { color: var(--x); } .pbox.o .v { color: var(--o); }
+  .pbox.turno.x { border-color: var(--x); box-shadow: 0 0 22px color-mix(in srgb, var(--x) 40%, transparent); }
+  .pbox.turno.o { border-color: var(--o); box-shadow: 0 0 22px color-mix(in srgb, var(--o) 40%, transparent); }
+  #status { font-size: 1.1rem; font-weight: 700; min-height: 1.5em; text-align: center; }
+
+  #board { --n: 3; display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 9px; width: min(86vw, 380px, 54vh); width: min(86vw, 380px, 54dvh); aspect-ratio: 1; }
+  .cell {
+    border: none; border-radius: 16px; background: rgba(255,255,255,.09); padding: calc(42% / var(--n));
+    cursor: pointer; transition: background .2s, transform .12s; position: relative; touch-action: manipulation;
+  }
+  #board[style*="--n: 5"] .cell, #board[style*="--n:5"] .cell { border-radius: 12px; }
+  .cell:hover:not(:disabled) { background: rgba(255,255,255,.17); transform: scale(1.04); }
+  .cell:active:not(:disabled) { transform: scale(.94); }
+  .cell:disabled { cursor: default; }
+  .cell svg { width: 100%; height: 100%; overflow: visible; }
+  .cell path, .cell circle { fill: none; stroke-width: 10; stroke-linecap: round; }
+  .cell.x path { stroke: var(--x); filter: drop-shadow(0 0 7px var(--x)); stroke-dasharray: 120; stroke-dashoffset: 120; animation: tracar .3s forwards; }
+  .cell.x path + path { animation-delay: .12s; }
+  .cell.o circle { stroke: var(--o); filter: drop-shadow(0 0 7px var(--o)); stroke-dasharray: 252; stroke-dashoffset: 252; animation: tracar .45s forwards; transform: rotate(-90deg); transform-origin: center; }
+  @keyframes tracar { to { stroke-dashoffset: 0; } }
+  .cell.win { background: color-mix(in srgb, var(--win) 28%, transparent); box-shadow: 0 0 24px color-mix(in srgb, var(--win) 55%, transparent); animation: pulsa .6s ease-in-out 3; }
+  @keyframes pulsa { 50% { transform: scale(1.09); } }
+  .cell.fraco:not(.win) { opacity: .4; }
+
+  .rodape { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; justify-content: center; }
+
+  #resultado { position: fixed; inset: 0; z-index: 5; display: none; align-items: center; justify-content: center; padding: 16px; background: rgba(5,3,10,.62); backdrop-filter: blur(4px); }
+  #resultado.ativa { display: flex; animation: fade .3s; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  #resultado .caixa {
+    width: min(100%, 360px); padding: 26px 22px; border-radius: 24px; text-align: center;
+    background: var(--bg2); border: 1px solid var(--card-b); box-shadow: 0 30px 80px rgba(0,0,0,.6);
+    display: flex; flex-direction: column; gap: 12px; animation: entrar .4s cubic-bezier(.2,.9,.3,1.3);
+  }
+  #resultado h3 { margin: 0; font-size: 1.8rem; }
+  #resultado p { margin: 0; color: var(--mut); }
+  #res-xp { color: var(--win); font-weight: 700; min-height: 1.2em; }
+  .ganhou-x { color: var(--x); text-shadow: 0 0 20px var(--x); }
+  .ganhou-o { color: var(--o); text-shadow: 0 0 20px var(--o); }
+
+  #confete { position: fixed; inset: 0; z-index: 6; pointer-events: none; }
+  .rodape-info { color: var(--mut); font-size: .78rem; text-align: center; }
+
+  #direitos { position: relative; z-index: 2; margin-top: 14px; text-align: center; color: var(--mut); font-size: .75rem; letter-spacing: .5px; opacity: .85; }
+  #direitos b { color: var(--txt); font-weight: 600; }
+
+  /* online */
+  .spinner { width: 54px; height: 54px; border-radius: 50%; border: 5px solid rgba(255,255,255,.12); border-top-color: var(--x); border-right-color: var(--o); animation: gira .9s linear infinite; }
+  @keyframes gira { to { transform: rotate(360deg); } }
+  #on-status { text-align: center; font-size: 1.05rem; line-height: 1.4; }
+  #on-codigo-big { font-size: 2.6rem; font-weight: 800; letter-spacing: 8px; padding: 6px 18px 6px 26px; border-radius: 14px; background: rgba(0,0,0,.3); border: 1px dashed var(--accent); color: var(--x); }
+  #on-erro { color: #ffb4b4; font-size: .9rem; text-align: center; min-height: 1.2em; }
+  .divisor { width: 100%; text-align: center; color: var(--mut); font-size: .78rem; letter-spacing: 1.5px; }
+  .linha { display: flex; gap: 8px; width: 100%; }
+  .linha input { flex: 1; min-width: 0; text-transform: uppercase; text-align: center; letter-spacing: 4px; }
+  .linha .btn { width: auto; padding: 11px 18px; }
+
+  @media (max-height: 640px) { .tela { padding: 16px 16px; gap: 10px; } h1 { font-size: 1.8rem; } .logo { display: none; } }
+  @media (prefers-reduced-motion: reduce) { .float, .spinner { animation: none; } .tela.ativa { animation: none; } }
+</style>
+</head>
+<body data-tema="fogo">
+<div id="bg"></div>
+<canvas id="confete"></canvas>
+
+<!-- MENU INICIAL -->
+<section class="tela ativa" id="menu">
+  <div class="logo">
+    <span class="x">X</span><span class="o">O</span><span class="x">X</span>
+    <span class="o">O</span><span class="x">X</span><span class="o">O</span>
+    <span class="x">X</span><span class="o">O</span><span class="x">X</span>
+  </div>
+  <h1>Jogo da Velha</h1>
+  <p class="sub">Escolha como quer jogar</p>
+
+  <div class="perfil">
+    <div class="p-topo"><span>Nível <b id="p-nivel">1</b></span><span id="p-seq"></span></div>
+    <div class="barra"><i id="p-barra"></i></div>
+    <div class="p-xp" id="p-xp"></div>
+  </div>
+
+  <button class="btn primario" id="m-on">Jogar online<small>Encontre um oponente de verdade</small></button>
+  <button class="btn" id="m-pc">Jogar contra o computador<small>Fácil, médio ou difícil</small></button>
+  <button class="btn" id="m-2p">Dois jogadores<small>No mesmo aparelho</small></button>
+  <button class="btn" id="m-reg">Como jogar</button>
+
+  <div class="menu-rodape">
+    <div class="temas" id="temas" role="group" aria-label="Tema de cores">
+      <button class="sw sel" data-t="fogo" aria-label="Tema Fogo"></button>
+      <button class="sw" data-t="neon" aria-label="Tema Neon"></button>
+      <button class="sw" data-t="doce" aria-label="Tema Doce"></button>
+    </div>
+    <button class="toggle" id="t-som">Som: ligado</button>
+  </div>
+</section>
+
+<!-- CONFIGURACAO -->
+<section class="tela" id="config">
+  <h2 id="cfg-titulo">Nova partida</h2>
+
+  <div class="grupo" id="g-dif">
+    <label>Dificuldade</label>
+    <div class="opcoes" id="o-dif">
+      <button class="op" data-v="facil">Fácil</button>
+      <button class="op sel" data-v="medio">Médio</button>
+      <button class="op" data-v="dificil">Difícil</button>
+    </div>
+  </div>
+
+  <div class="grupo" id="g-tam">
+    <label>Tabuleiro</label>
+    <div class="opcoes" id="o-tam">
+      <button class="op sel" data-v="3">3x3</button>
+      <button class="op" data-v="4">4x4</button>
+      <button class="op" data-v="5">5x5</button>
+    </div>
+    <div class="rodape-info" id="tam-info">Complete 3 em linha</div>
+  </div>
+
+  <div class="grupo" id="g-simb">
+    <label>Você joga com</label>
+    <div class="opcoes" id="o-simb">
+      <button class="op simx sel" data-v="X">X</button>
+      <button class="op simo" data-v="O">O</button>
+    </div>
+  </div>
+
+  <div class="grupo">
+    <label>Nomes</label>
+    <div class="linha-nomes">
+      <input class="nome" id="n1" maxlength="10" placeholder="Jogador X">
+      <input class="nome" id="n2" maxlength="10" placeholder="Jogador O">
+    </div>
+  </div>
+
+  <div class="grupo">
+    <label>Quem começa</label>
+    <div class="opcoes" id="o-ini">
+      <button class="op sel" data-v="X">X</button>
+      <button class="op" data-v="O">O</button>
+      <button class="op" data-v="alt">Alternar</button>
+    </div>
+  </div>
+
+  <button class="btn primario" id="c-ir">Começar</button>
+  <button class="btn pequeno" id="c-voltar">Voltar</button>
+</section>
+
+<!-- ONLINE -->
+<section class="tela" id="online">
+  <h2>Jogar online</h2>
+  <div id="on-form" style="width:100%;display:flex;flex-direction:column;gap:14px;align-items:center">
+    <div class="grupo">
+      <label>Seu nome</label>
+      <input class="nome" id="on-nome" maxlength="10" placeholder="Jogador">
+    </div>
+    <button class="btn primario" id="on-buscar">Buscar oponente<small>Você é pareado com quem estiver procurando</small></button>
+    <div class="divisor">OU JOGUE COM UM AMIGO</div>
+    <button class="btn" id="on-criar">Criar sala privada<small>Gera um código para enviar ao amigo</small></button>
+    <div class="linha">
+      <input class="nome" id="on-cod" maxlength="4" placeholder="CÓDIGO" autocapitalize="characters" autocomplete="off">
+      <button class="btn" id="on-entrar">Entrar</button>
+    </div>
+    <div id="on-erro"></div>
+    <button class="btn pequeno" id="on-voltar">Voltar</button>
+  </div>
+  <div id="on-busca" style="width:100%;display:none;flex-direction:column;gap:18px;align-items:center">
+    <div class="spinner"></div>
+    <div id="on-codigo-big" style="display:none"></div>
+    <div id="on-status"></div>
+    <button class="btn pequeno" id="on-cancelar">Cancelar</button>
+  </div>
+</section>
+
+<!-- REGRAS -->
+<section class="tela" id="regras">
+  <h2>Como jogar</h2>
+  <div class="grupo" style="color:var(--mut);line-height:1.55;font-size:.97rem">
+    <span>Os jogadores se alternam marcando uma casa vazia do tabuleiro.</span>
+    <span>No 3x3 vence quem completar 3 símbolos iguais em linha, coluna ou diagonal. No 4x4 e no 5x5, é preciso completar 4 em linha.</span>
+    <span>Se todas as casas forem preenchidas sem vencedor, a partida termina em empate.</span>
+    <span>Contra o computador e no modo online você ganha XP, sobe de nível e acumula sequências de vitórias. O progresso fica salvo neste aparelho.</span>
+    <span>No computador, as teclas 1 a 9 marcam as casas do 3x3 (como no teclado numérico), R reinicia e M volta ao menu.</span>
+  </div>
+  <button class="btn pequeno" id="r-voltar">Voltar</button>
+</section>
+
+<!-- JOGO -->
+<section class="tela" id="jogo">
+  <div class="topo">
+    <button class="btn pequeno" id="j-menu">Menu</button>
+    <span id="j-seq"></span>
+    <span class="rodape-info" id="j-modo"></span>
+  </div>
+  <div class="placar">
+    <div class="pbox x" id="pb-x"><div class="n" id="nm-x">X</div><div class="v" id="pt-x">0</div></div>
+    <div class="pbox" id="pb-e"><div class="n">Empates</div><div class="v" id="pt-e">0</div></div>
+    <div class="pbox o" id="pb-o"><div class="n" id="nm-o">O</div><div class="v" id="pt-o">0</div></div>
+  </div>
+  <div id="status"></div>
+  <div id="board"></div>
+  <div class="rodape">
+    <button class="btn pequeno" id="j-desfazer">Desfazer</button>
+    <button class="btn pequeno" id="j-novo">Reiniciar rodada</button>
+    <button class="btn pequeno" id="j-zerar">Zerar placar</button>
+  </div>
+</section>
+
+<div id="resultado">
+  <div class="caixa">
+    <h3 id="res-t"></h3>
+    <p id="res-p"></p>
+    <div id="res-xp"></div>
+    <button class="btn primario" id="res-prox">Próxima rodada</button>
+    <button class="btn" id="res-menu">Voltar ao menu</button>
+  </div>
+</div>
+
+<div id="direitos">&copy; 2026 <b>Mec Produ&ccedil;&otilde;es</b>. Todos os direitos reservados.</div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+
+/* ---------- armazenamento local (tolerante a falhas) ---------- */
+function ler(k, def) { try { const v = localStorage.getItem('velha.' + k); return v === null ? def : JSON.parse(v); } catch (_) { return def; } }
+function gravar(k, v) { try { localStorage.setItem('velha.' + k, JSON.stringify(v)); } catch (_) {} }
+
+/* ---------- som e vibracao ---------- */
+let ac = null, somOn = ler('som', true);
+function audio() {
+  if (!somOn) return null;
+  try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); return ac; }
+  catch (_) { return null; }
+}
+function tom(f, d = .12, tipo = 'sine', vol = .12, atraso = 0) {
+  const c = audio(); if (!c) return;
+  const t = c.currentTime + atraso, o = c.createOscillator(), g = c.createGain();
+  o.type = tipo; o.frequency.setValueAtTime(f, t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + .012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + d + .03);
+}
+const somJogada = s => tom(s === 'X' ? 520 : 390, .12, 'triangle', .15);
+const somVitoria = () => [523, 659, 784, 1047].forEach((f, i) => tom(f, .22, 'triangle', .17, i * .11));
+const somDerrota = () => [330, 262, 196].forEach((f, i) => tom(f, .26, 'sawtooth', .08, i * .15));
+const somEmpate = () => { tom(330, .2, 'sine', .12); tom(330, .2, 'sine', .12, .22); };
+const somNivel = () => [392, 523, 659, 784, 1047].forEach((f, i) => tom(f, .18, 'square', .07, i * .08));
+function vibrar(p) { try { navigator.vibrate && navigator.vibrate(p); } catch (_) {} }
+document.addEventListener('click', e => { if (e.target.closest('.btn,.op,.sw,.toggle')) tom(660, .05, 'square', .035); });
+
+function atualizarSomTxt() { $('t-som').textContent = 'Som: ' + (somOn ? 'ligado' : 'desligado'); }
+$('t-som').onclick = () => { somOn = !somOn; gravar('som', somOn); atualizarSomTxt(); if (somOn) tom(660, .08, 'triangle', .1); };
+atualizarSomTxt();
+
+/* ---------- temas ---------- */
+function aplicarTema(t) {
+  document.body.dataset.tema = t;
+  document.querySelectorAll('.sw').forEach(b => b.classList.toggle('sel', b.dataset.t === t));
+  const cor = getComputedStyle(document.body).getPropertyValue('--bg1').trim();
+  const meta = document.querySelector('meta[name="theme-color"]'); if (meta && cor) meta.content = cor;
+}
+$('temas').addEventListener('click', e => {
+  const b = e.target.closest('.sw'); if (!b) return;
+  gravar('tema', b.dataset.t); aplicarTema(b.dataset.t);
+});
+aplicarTema(ler('tema', 'fogo'));
+
+/* ---------- fundo animado ---------- */
+(function () {
+  const bg = $('bg');
+  for (let i = 0; i < 20; i++) {
+    const s = document.createElement('span');
+    s.className = 'float';
+    s.textContent = i % 2 ? 'O' : 'X';
+    s.style.left = Math.random() * 100 + 'vw';
+    s.style.fontSize = (30 + Math.random() * 90) + 'px';
+    s.style.color = i % 2 ? 'var(--o)' : 'var(--x)';
+    s.style.animationDuration = (18 + Math.random() * 28) + 's';
+    s.style.animationDelay = (-Math.random() * 40) + 's';
+    bg.appendChild(s);
+  }
+})();
+
+/* ---------- perfil (XP, nivel, sequencia) ---------- */
+const PERFIL0 = { xp: 0, seq: 0, melhor: 0, v: 0, d: 0, e: 0 };
+const nivelDe = xp => 1 + Math.floor(Math.sqrt(xp / 40));
+function renderPerfil() {
+  const p = Object.assign({}, PERFIL0, ler('perfil', {}));
+  const n = nivelDe(p.xp), ini = 40 * (n - 1) ** 2, fim = 40 * n ** 2;
+  $('p-nivel').textContent = n;
+  $('p-barra').style.width = Math.round(100 * (p.xp - ini) / (fim - ini)) + '%';
+  $('p-xp').textContent = (p.xp - ini) + ' / ' + (fim - ini) + ' XP para o nível ' + (n + 1) + '  -  ' + p.v + ' vitórias, melhor sequência ' + p.melhor;
+  $('p-seq').textContent = p.seq > 1 ? 'Sequência: ' + p.seq + ' vitórias' : '';
+}
+function registrarResultado(r) {
+  const p = Object.assign({}, PERFIL0, ler('perfil', {}));
+  const antes = nivelDe(p.xp);
+  let ganho;
+  if (r === 'v') {
+    p.seq++; p.v++; p.melhor = Math.max(p.melhor, p.seq);
+    ganho = 30 + Math.min(p.seq - 1, 5) * 5 + (cfg.modo === 'online' ? 10 : 0) + (cfg.modo === 'pc' && cfg.dif === 'dificil' ? 10 : 0);
+  } else if (r === 'e') { p.e++; ganho = 10; }
+  else { p.d++; p.seq = 0; ganho = 5; }
+  p.xp += ganho; gravar('perfil', p);
+  return { ganho, seq: p.seq, nivel: nivelDe(p.xp), subiu: nivelDe(p.xp) > antes };
+}
+renderPerfil();
+
+/* ---------- navegacao ---------- */
+function ir(id) {
+  if (id === 'menu') { sairOnline(); renderPerfil(); }
+  document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
+  $(id).classList.add('ativa');
+  $('resultado').classList.remove('ativa');
+  window.scrollTo(0, 0);
+}
+
+/* ---------- estado ---------- */
+const LINHAS_TAM = { 3: 'Complete 3 em linha', 4: 'Complete 4 em linha', 5: 'Complete 4 em linha' };
+const cfg = { modo: 'pc', dif: 'medio', humano: 'X', inicio: 'X', tam: 3 };
+let N = 3, K = 3, LINHAS = [], celulas = [];
+let tab, vez, fim, rodada, placar, nomes, esperandoPC = false, hist = [], ultimo = null;
+
+function selecionar(grupoId, valor) { $(grupoId).querySelectorAll('.op').forEach(b => b.classList.toggle('sel', b.dataset.v === valor)); }
+function ligarGrupo(grupoId, chave, conv) {
+  $(grupoId).addEventListener('click', e => {
+    const b = e.target.closest('.op'); if (!b) return;
+    cfg[chave] = conv ? conv(b.dataset.v) : b.dataset.v; selecionar(grupoId, b.dataset.v);
+    if (chave === 'humano') atualizarPlaceholders();
+    if (chave === 'tam') $('tam-info').textContent = LINHAS_TAM[cfg.tam];
+  });
+}
+ligarGrupo('o-dif', 'dif'); ligarGrupo('o-simb', 'humano'); ligarGrupo('o-ini', 'inicio'); ligarGrupo('o-tam', 'tam', Number);
+
+function atualizarPlaceholders() {
+  if (cfg.modo === 'pc') { $('n1').placeholder = 'Seu nome'; $('n2').style.display = 'none'; }
+  else { $('n1').placeholder = 'Jogador X'; $('n2').placeholder = 'Jogador O'; $('n2').style.display = ''; }
+}
+function abrirConfig(modo) {
+  cfg.modo = modo;
+  $('cfg-titulo').textContent = modo === 'pc' ? 'Contra o computador' : 'Dois jogadores';
+  $('g-dif').style.display = modo === 'pc' ? '' : 'none';
+  $('g-simb').style.display = modo === 'pc' ? '' : 'none';
+  atualizarPlaceholders();
+  ir('config');
+}
+$('m-pc').onclick = () => abrirConfig('pc');
+$('m-2p').onclick = () => abrirConfig('2p');
+$('m-reg').onclick = () => ir('regras');
+$('r-voltar').onclick = () => ir('menu');
+$('c-voltar').onclick = () => ir('menu');
+$('j-menu').onclick = () => ir('menu');
+$('res-menu').onclick = () => ir('menu');
+
+function ajustarBotoes() {
+  $('j-desfazer').style.display = cfg.modo === 'pc' ? '' : 'none';
+  $('j-novo').style.display = cfg.modo === 'online' ? 'none' : '';
+  $('j-zerar').style.display = cfg.modo === 'online' ? 'none' : '';
+}
+function atualizarSeqTopo() {
+  const p = Object.assign({}, PERFIL0, ler('perfil', {}));
+  $('j-seq').textContent = (cfg.modo !== '2p' && p.seq > 1) ? 'Sequência: ' + p.seq : '';
+}
+
+$('c-ir').onclick = () => {
+  const n1 = $('n1').value.trim(), n2 = $('n2').value.trim();
+  if (cfg.modo === 'pc') {
+    const h = cfg.humano;
+    nomes = { [h]: n1 || 'Você', [h === 'X' ? 'O' : 'X']: 'Computador' };
+  } else nomes = { X: n1 || 'Jogador X', O: n2 || 'Jogador O' };
+  placar = { X: 0, O: 0, E: 0 }; rodada = 0;
+  $('nm-x').textContent = nomes.X + ' (X)';
+  $('nm-o').textContent = nomes.O + ' (O)';
+  const difTxt = { facil: 'Fácil', medio: 'Médio', dificil: 'Difícil' }[cfg.dif];
+  $('j-modo').textContent = (cfg.modo === 'pc' ? 'Computador - ' + difTxt : 'Dois jogadores') + ' - ' + cfg.tam + 'x' + cfg.tam;
+  aplicarTamanho(cfg.tam);
+  ajustarBotoes(); atualizarSeqTopo(); atualizarPlacar();
+  ir('jogo');
+  novaRodada();
+};
+
+/* ---------- tabuleiro generico (NxN, K em linha) ---------- */
+function gerarLinhas() {
+  LINHAS = [];
+  const dirs = [[0, 1], [1, 0], [1, 1], [1, -1]];
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) for (const [dr, dc] of dirs) {
+    const r2 = r + (K - 1) * dr, c2 = c + (K - 1) * dc;
+    if (r2 < 0 || r2 >= N || c2 < 0 || c2 >= N) continue;
+    const l = []; for (let k = 0; k < K; k++) l.push((r + k * dr) * N + (c + k * dc));
+    LINHAS.push(l);
+  }
+}
+function aplicarTamanho(n) {
+  N = n; K = n === 3 ? 3 : 4; gerarLinhas();
+  const el = $('board'); el.innerHTML = ''; el.style.setProperty('--n', N); celulas = [];
+  for (let i = 0; i < N * N; i++) {
+    const b = document.createElement('button');
+    b.className = 'cell'; b.setAttribute('aria-label', 'Casa ' + (i + 1));
+    b.addEventListener('click', () => clique(i));
+    el.appendChild(b); celulas.push(b);
+  }
+}
+aplicarTamanho(3);
+
+const SVG_X = '<svg viewBox="0 0 100 100"><path d="M12 12 L88 88"/><path d="M88 12 L12 88"/></svg>';
+const SVG_O = '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40"/></svg>';
+
+function vencedor(t) {
+  for (const l of LINHAS) {
+    const a = t[l[0]];
+    if (a && l.every(i => t[i] === a)) return { quem: a, linha: l };
+  }
+  return null;
+}
+function simboloPC() { return cfg.humano === 'X' ? 'O' : 'X'; }
+function ehVezDoPC() { return cfg.modo === 'pc' && vez === simboloPC(); }
+
+function novaRodada() {
+  tab = Array(N * N).fill(null); hist = [];
+  fim = false; esperandoPC = false; ultimo = null;
+  NET.nextMine = false; NET.nextTheirs = false;
+  $('res-prox').disabled = false; $('res-prox').textContent = 'Próxima rodada';
+  $('resultado').classList.remove('ativa');
+  celulas.forEach(c => { c.innerHTML = ''; c.disabled = false; c.className = 'cell'; });
+  vez = cfg.inicio === 'alt' ? (rodada % 2 === 0 ? 'X' : 'O') : cfg.inicio;
+  rodada++;
+  atualizarVez();
+  if (ehVezDoPC()) jogadaPC();
+}
+function atualizarVez() {
+  $('pb-x').classList.toggle('turno', !fim && vez === 'X');
+  $('pb-o').classList.toggle('turno', !fim && vez === 'O');
+  if (!fim) $('status').textContent = 'Vez de ' + nomes[vez] + ' (' + vez + ')';
+}
+function atualizarPlacar() { $('pt-x').textContent = placar.X; $('pt-o').textContent = placar.O; $('pt-e').textContent = placar.E; }
+
+function marcar(i) {
+  tab[i] = vez; hist.push(i);
+  const c = celulas[i];
+  c.innerHTML = vez === 'X' ? SVG_X : SVG_O;
+  c.classList.add(vez.toLowerCase()); c.disabled = true;
+  somJogada(vez); vibrar(12);
+
+  const v = vencedor(tab);
+  if (v) {
+    fim = true; placar[v.quem]++;
+    celulas.forEach((el, n) => { el.disabled = true; if (v.linha.includes(n)) el.classList.add('win'); else el.classList.add('fraco'); });
+    atualizarPlacar(); atualizarVez();
+    $('status').textContent = nomes[v.quem] + ' venceu!';
+    finalizar(v.quem);
+    setTimeout(() => mostrarResultado(v.quem), 1000);
+  } else if (tab.every(Boolean)) {
+    fim = true; placar.E++;
+    atualizarPlacar(); atualizarVez();
+    $('status').textContent = 'Empate!';
+    finalizar(null);
+    setTimeout(() => mostrarResultado(null), 700);
+  } else {
+    vez = vez === 'X' ? 'O' : 'X';
+    atualizarVez();
+  }
+}
+
+// som, vibracao e XP ao fim da rodada
+function finalizar(q) {
+  let meu = null;
+  if (cfg.modo === 'pc') meu = q === null ? 'e' : (q === cfg.humano ? 'v' : 'd');
+  else if (cfg.modo === 'online') meu = q === null ? 'e' : (q === NET.sym ? 'v' : 'd');
+  ultimo = meu ? registrarResultado(meu) : null;
+  if (meu === 'd') { somDerrota(); vibrar(220); }
+  else if (meu === 'e' || q === null) { somEmpate(); vibrar(60); }
+  else { somVitoria(); vibrar([60, 40, 60, 40, 140]); }
+  if (ultimo && ultimo.subiu) setTimeout(somNivel, 900);
+  atualizarSeqTopo();
+}
+
+function clique(i) {
+  if (cfg.modo === 'online') {
+    if (fim || tab[i] || vez !== NET.sym || !NET.conn) return;
+    marcar(i);
+    try { NET.conn.send({ t: 'move', i }); } catch (_) {}
+    return;
+  }
+  if (fim || tab[i] || esperandoPC) return;
+  if (ehVezDoPC()) return;
+  marcar(i);
+  if (!fim && ehVezDoPC()) jogadaPC();
+}
+
+function mostrarResultado(q) {
+  const t = $('res-t'), p = $('res-p');
+  if (q) {
+    t.textContent = nomes[q] + ' venceu!';
+    t.className = q === 'X' ? 'ganhou-x' : 'ganhou-o';
+    p.textContent = 'Placar: ' + nomes.X + ' ' + placar.X + ' x ' + placar.O + ' ' + nomes.O;
+    const perdeu = (cfg.modo === 'pc' && q === simboloPC()) || (cfg.modo === 'online' && q !== NET.sym);
+    if (!perdeu) confete();
+  } else {
+    t.textContent = 'Deu velha!'; t.className = '';
+    p.textContent = 'Ninguém levou essa. Empates: ' + placar.E;
+  }
+  let xp = '';
+  if (ultimo) {
+    xp = '+' + ultimo.ganho + ' XP';
+    if (ultimo.seq > 1) xp += '  -  Sequência de ' + ultimo.seq + ' vitórias';
+    if (ultimo.subiu) xp += '  -  Nível ' + ultimo.nivel + '!';
+  }
+  $('res-xp').textContent = xp;
+  $('resultado').classList.add('ativa');
+}
+
+$('res-prox').onclick = proxima;
+function proxima() {
+  if (cfg.modo !== 'online') { novaRodada(); return; }
+  if (!NET.conn) { buscar(); return; }
+  NET.nextMine = true;
+  try { NET.conn.send({ t: 'next' }); } catch (_) {}
+  $('res-prox').disabled = true; $('res-prox').textContent = 'Aguardando oponente...';
+  checarProxima();
+}
+function checarProxima() { if (NET.nextMine && NET.nextTheirs) novaRodada(); }
+
+$('j-novo').onclick = () => { rodada = Math.max(0, rodada - 1); novaRodada(); };
+$('j-zerar').onclick = () => { placar = { X: 0, O: 0, E: 0 }; rodada = 0; atualizarPlacar(); novaRodada(); };
+$('j-desfazer').onclick = () => {
+  if (cfg.modo !== 'pc' || fim || esperandoPC || vez !== cfg.humano || hist.length < 2) return;
+  for (let k = 0; k < 2; k++) {
+    const i = hist.pop(); tab[i] = null;
+    celulas[i].innerHTML = ''; celulas[i].disabled = false; celulas[i].className = 'cell';
+  }
+  atualizarVez();
+};
+
+/* ---------- computador ---------- */
+function minimax(t, turnoPC, pc) {
+  const hum = pc === 'X' ? 'O' : 'X';
+  const v = vencedor(t);
+  if (v) return v.quem === pc ? 1 : -1;
+  if (t.every(Boolean)) return 0;
+  let melhor = turnoPC ? -2 : 2;
+  for (let i = 0; i < t.length; i++) {
+    if (t[i]) continue;
+    t[i] = turnoPC ? pc : hum;
+    const s = minimax(t, !turnoPC, pc);
+    t[i] = null;
+    melhor = turnoPC ? Math.max(melhor, s) : Math.min(melhor, s);
+  }
+  return melhor;
+}
+function sortear(lista) { return lista[Math.floor(Math.random() * lista.length)]; }
+function livres() { return tab.map((v, i) => v ? null : i).filter(v => v !== null); }
+
+function melhor3x3() {
+  const pc = simboloPC();
+  let melhor = -2, ops = [];
+  for (const i of livres()) {
+    tab[i] = pc; const s = minimax(tab, false, pc); tab[i] = null;
+    if (s > melhor) { melhor = s; ops = [i]; } else if (s === melhor) ops.push(i);
+  }
+  return sortear(ops);
+}
+// 4x4 e 5x5: vence se puder, bloqueia, senao pontua cada casa pelo potencial das linhas
+function heuristica() {
+  const pc = simboloPC(), hum = pc === 'X' ? 'O' : 'X';
+  const lv = livres();
+  for (const alvo of [pc, hum]) for (const i of lv) {
+    tab[i] = alvo; const w = vencedor(tab); tab[i] = null; if (w) return i;
+  }
+  const pts = Array(N * N).fill(0);
+  for (const l of LINHAS) {
+    let a = 0, b = 0;
+    for (const i of l) { if (tab[i] === pc) a++; else if (tab[i] === hum) b++; }
+    if (a && b) continue;
+    const val = a ? Math.pow(10, a) : b ? Math.pow(10, b) * .9 : 1;
+    for (const i of l) if (!tab[i]) pts[i] += val;
+  }
+  let melhor = -1, ops = [];
+  for (const i of lv) {
+    const r = Math.floor(i / N), c = i % N, dist = Math.abs(r - (N - 1) / 2) + Math.abs(c - (N - 1) / 2);
+    const p = pts[i] + (N - dist) * .5;
+    if (p > melhor + 1e-9) { melhor = p; ops = [i]; } else if (Math.abs(p - melhor) < 1e-9) ops.push(i);
+  }
+  return sortear(ops);
+}
+function escolherJogada() {
+  const forte = N === 3 ? melhor3x3 : heuristica;
+  if (cfg.dif === 'facil') return sortear(livres());
+  if (cfg.dif === 'medio') return Math.random() < (N === 3 ? .55 : .6) ? forte() : sortear(livres());
+  return forte();
+}
+function jogadaPC() {
+  esperandoPC = true;
+  setTimeout(() => {
+    if (fim || !esperandoPC) return;
+    const i = escolherJogada();
+    esperandoPC = false;
+    marcar(i);
+  }, 520);
+}
+
+/* ---------- online (WebRTC via PeerJS, sem servidor proprio) ---------- */
+/* Pareamento: existem 16 "vagas" com IDs fixos. Quem busca tenta conectar em todas ao mesmo
+   tempo; se achar um anfitriao esperando, joga com ele. Se nao achar, vira anfitriao na
+   primeira vaga livre e espera. Anfitrioes de vaga alta tambem procuram vagas menores.
+   O modo online usa sempre o tabuleiro 3x3. */
+const NET = { peer: null, conn: null, sym: null, token: 0, state: 'idle', timer: null, nextMine: false, nextTheirs: false, pend: null, pendT: null, pendNome: '' };
+const PREFIX = 'mecvelha1-';
+const SLOTS = 16;
+
+const netOk = () => typeof Peer !== 'undefined';
+const meuNome = () => ($('on-nome').value.trim() || 'Jogador').slice(0, 10);
+const limpaNome = s => (String(s || '').replace(/[^\p{L}\p{N} _.-]/gu, '').trim().slice(0, 10)) || 'Oponente';
+const MSG_SEM_LIB = 'Não foi possível carregar o módulo online. Verifique sua internet e recarregue a página.';
+
+function mostrarBusca(sim, texto, codigo) {
+  $('on-form').style.display = sim ? 'none' : 'flex';
+  $('on-busca').style.display = sim ? 'flex' : 'none';
+  if (texto !== undefined) $('on-status').textContent = texto;
+  $('on-codigo-big').textContent = codigo || '';
+  $('on-codigo-big').style.display = codigo ? '' : 'none';
+}
+function falha(msg) {
+  sairOnline(); mostrarBusca(false);
+  $('on-erro').textContent = msg;
+  if (!$('online').classList.contains('ativa')) ir('online');
+}
+function erroTxt(e) {
+  if (e && e.type === 'unavailable-id') return 'Esse código já está em uso.';
+  return 'Não foi possível conectar ao servidor de pareamento. Verifique sua internet e tente de novo.';
+}
+function sairOnline() {
+  NET.token++; NET.state = 'idle';
+  clearInterval(NET.timer); clearTimeout(NET.pendT); NET.pend = null;
+  const c = NET.conn, p = NET.peer;
+  NET.conn = null; NET.peer = null;
+  try { c && c.close(); } catch (_) {}
+  try { p && p.destroy(); } catch (_) {}
+}
+function criarPeer(id) {
+  return new Promise((res, rej) => {
+    let p, feito = false;
+    try { p = id ? new Peer(id) : new Peer(); } catch (e) { rej({ type: 'init' }); return; }
+    const t = setTimeout(() => { if (feito) return; feito = true; try { p.destroy(); } catch (_) {} rej({ type: 'timeout' }); }, 10000);
+    p.on('open', () => { if (feito) return; feito = true; clearTimeout(t); res(p); });
+    p.on('error', e => { if (feito) return; feito = true; clearTimeout(t); try { p.destroy(); } catch (_) {} rej(e); });
+  });
+}
+function tentarConectar(peer, alvo) {
+  return new Promise(res => {
+    let fimT = false, t = null;
+    const conn = peer.connect(alvo, { reliable: true });
+    const onErr = e => { if (e && e.type === 'peer-unavailable' && String(e.message).includes(alvo)) done(null); };
+    function done(v) {
+      if (fimT) return;
+      fimT = true; clearTimeout(t);
+      try { peer.off('error', onErr); } catch (_) {}
+      if (!v) { try { conn.close(); } catch (_) {} }
+      res(v);
+    }
+    peer.on('error', onErr);
+    t = setTimeout(() => done(null), 5500);
+    conn.on('open', () => { try { conn.send({ t: 'hello', nome: meuNome() }); } catch (_) {} });
+    conn.on('data', d => {
+      if (!d) return;
+      if (d.t === 'welcome') done({ conn, nome: limpaNome(d.nome) });
+      else if (d.t === 'busy') done(null);
+    });
+    conn.on('close', () => done(null));
+  });
+}
+function soltar(c) {
+  if (NET.pend === c) { NET.pend = null; clearTimeout(NET.pendT); if (NET.state === 'pending') NET.state = 'wait'; }
+  try { if (c !== NET.conn) c.close(); } catch (_) {}
+}
+// Anfitriao: hello -> welcome -> (confirm do visitante) -> partida. Se o visitante desistir, volta a esperar.
+function aceitar(c, token) {
+  c.on('data', d => {
+    if (!d || c === NET.conn) return;
+    if (d.t === 'hello') {
+      if (NET.state === 'wait' && token === NET.token && !NET.pend) {
+        NET.state = 'pending'; NET.pend = c; NET.pendNome = limpaNome(d.nome);
+        try { c.send({ t: 'welcome', nome: meuNome() }); } catch (_) {}
+        clearTimeout(NET.pendT); NET.pendT = setTimeout(() => soltar(c), 7000);
+      } else {
+        try { c.send({ t: 'busy' }); } catch (_) {}
+        setTimeout(() => { try { c.close(); } catch (_) {} }, 300);
+      }
+    } else if (d.t === 'confirm' && NET.pend === c && NET.state === 'pending' && token === NET.token) {
+      clearTimeout(NET.pendT); NET.pend = null; NET.state = 'play'; clearInterval(NET.timer);
+      iniciarOnline(c, NET.peer, 'X', NET.pendNome);
+    } else if (d.t === 'cancel' && NET.pend === c) soltar(c);
+  });
+  c.on('close', () => { if (NET.pend === c) soltar(c); });
+}
+// Tenta varias vagas ao mesmo tempo (cada vaga vazia leva ~5 s para responder). O primeiro que responder ganha.
+function procurar(peer, ids, token) {
+  return new Promise(res => {
+    let ganhou = false, pend = ids.length;
+    if (!pend) { res(null); return; }
+    ids.forEach(id => tentarConectar(peer, id).then(r => {
+      pend--;
+      if (r) {
+        if (!ganhou && token === NET.token) { ganhou = true; try { r.conn.send({ t: 'confirm' }); } catch (_) {} res(r); }
+        else { try { r.conn.send({ t: 'cancel' }); } catch (_) {} setTimeout(() => { try { r.conn.close(); } catch (_) {} }, 200); }
+      }
+      if (pend === 0 && !ganhou) res(null);
+    }));
+  });
+}
+function esperar(peer, slot, token) {
+  NET.peer = peer; NET.state = 'wait';
+  peer.on('connection', c => aceitar(c, token));
+  peer.on('disconnected', () => { if (token === NET.token && NET.state !== 'play') { try { peer.reconnect(); } catch (_) {} } });
+  if (slot > 0) {
+    const menores = Array.from({ length: slot }, (_, j) => PREFIX + j);
+    NET.timer = setInterval(async () => {
+      if (NET.state !== 'wait' || token !== NET.token) return;
+      NET.state = 'joining';
+      const r = await procurar(peer, menores, token);
+      if (token !== NET.token) return;
+      if (r) { clearInterval(NET.timer); NET.state = 'play'; iniciarOnline(r.conn, peer, 'O', r.nome); return; }
+      if (NET.state === 'joining') NET.state = 'wait';
+    }, 10000);
+  }
+}
+async function buscar() {
+  if (!netOk()) return falha(MSG_SEM_LIB);
+  sairOnline();
+  const token = ++NET.token;
+  $('on-erro').textContent = '';
+  ir('online'); mostrarBusca(true, 'Conectando ao servidor...');
+  let guest;
+  try { guest = await criarPeer(null); } catch (e) { if (token === NET.token) falha(erroTxt(e)); return; }
+  if (token !== NET.token) { try { guest.destroy(); } catch (_) {} return; }
+
+  mostrarBusca(true, 'Procurando um oponente...');
+  const todos = Array.from({ length: SLOTS }, (_, k) => PREFIX + k);
+  const r = await procurar(guest, todos, token);
+  if (token !== NET.token) { try { guest.destroy(); } catch (_) {} return; }
+  if (r) { NET.state = 'play'; iniciarOnline(r.conn, guest, 'O', r.nome); return; }
+  try { guest.destroy(); } catch (_) {}
+
+  for (let k = 0; k < SLOTS; k++) {
+    let p;
+    try { p = await criarPeer(PREFIX + k); }
+    catch (e) { if (token !== NET.token) return; if (e.type === 'unavailable-id') continue; falha(erroTxt(e)); return; }
+    if (token !== NET.token) { try { p.destroy(); } catch (_) {} return; }
+    mostrarBusca(true, 'Aguardando outro jogador entrar na fila...');
+    esperar(p, k, token);
+    return;
+  }
+  falha('O servidor está cheio no momento. Tente novamente em instantes.');
+}
+async function criarSala() {
+  if (!netOk()) return falha(MSG_SEM_LIB);
+  sairOnline();
+  const token = ++NET.token;
+  $('on-erro').textContent = '';
+  mostrarBusca(true, 'Criando sala...');
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  for (let tent = 0; tent < 6; tent++) {
+    const code = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    try {
+      const p = await criarPeer(PREFIX + 'p-' + code);
+      if (token !== NET.token) { try { p.destroy(); } catch (_) {} return; }
+      esperar(p, -1, token);
+      mostrarBusca(true, 'Sala criada. Envie o código ao seu amigo e aguarde ele entrar.', code);
+      return;
+    } catch (e) {
+      if (token !== NET.token) return;
+      if (e.type === 'unavailable-id') continue;
+      falha(erroTxt(e)); return;
+    }
+  }
+  falha('Não foi possível criar a sala. Tente novamente.');
+}
+async function entrarSala() {
+  const code = $('on-cod').value.trim().toUpperCase();
+  if (code.length !== 4) { $('on-erro').textContent = 'Digite o código de 4 caracteres.'; return; }
+  if (!netOk()) return falha(MSG_SEM_LIB);
+  sairOnline();
+  const token = ++NET.token;
+  $('on-erro').textContent = '';
+  mostrarBusca(true, 'Entrando na sala ' + code + '...');
+  let p;
+  try { p = await criarPeer(null); } catch (e) { if (token === NET.token) falha(erroTxt(e)); return; }
+  if (token !== NET.token) { try { p.destroy(); } catch (_) {} return; }
+  const r = await tentarConectar(p, PREFIX + 'p-' + code);
+  if (token !== NET.token) { try { p.destroy(); } catch (_) {} return; }
+  if (!r) { try { p.destroy(); } catch (_) {} return falha('Sala não encontrada ou já ocupada.'); }
+  NET.state = 'play';
+  try { r.conn.send({ t: 'confirm' }); } catch (_) {}
+  iniciarOnline(r.conn, p, 'O', r.nome);
+}
+function iniciarOnline(conn, peer, sym, nomeOp) {
+  clearInterval(NET.timer);
+  NET.conn = conn; NET.peer = peer; NET.sym = sym; NET.state = 'play';
+  conn.on('data', d => onNetData(conn, d));
+  conn.on('close', () => onNetClose(conn));
+  conn.on('error', () => onNetClose(conn));
+  cfg.modo = 'online'; cfg.inicio = 'alt';
+  aplicarTamanho(3);
+  const eu = meuNome();
+  nomes = sym === 'X' ? { X: eu, O: nomeOp } : { X: nomeOp, O: eu };
+  placar = { X: 0, O: 0, E: 0 }; rodada = 0;
+  $('nm-x').textContent = nomes.X + ' (X)';
+  $('nm-o').textContent = nomes.O + ' (O)';
+  $('j-modo').textContent = 'Online - você joga com ' + sym;
+  ajustarBotoes(); atualizarSeqTopo(); atualizarPlacar();
+  ir('jogo');
+  novaRodada();
+}
+function onNetData(conn, d) {
+  if (conn !== NET.conn || !d) return;
+  if (d.t === 'move') {
+    const i = d.i;
+    if (Number.isInteger(i) && i >= 0 && i < N * N && !fim && !tab[i] && vez !== NET.sym) marcar(i);
+  } else if (d.t === 'next') { NET.nextTheirs = true; checarProxima(); }
+}
+function onNetClose(conn) {
+  if (conn !== NET.conn) return;
+  const p = NET.peer;
+  NET.conn = null; NET.peer = null; NET.state = 'idle';
+  try { p && p.destroy(); } catch (_) {}
+  fim = true;
+  $('res-t').textContent = 'Oponente saiu'; $('res-t').className = '';
+  $('res-p').textContent = 'A conexão com o outro jogador foi encerrada.';
+  $('res-xp').textContent = '';
+  $('res-prox').disabled = false; $('res-prox').textContent = 'Buscar outro oponente';
+  $('resultado').classList.add('ativa');
+}
+$('m-on').onclick = () => { mostrarBusca(false); $('on-erro').textContent = ''; ir('online'); };
+$('on-buscar').onclick = buscar;
+$('on-criar').onclick = criarSala;
+$('on-entrar').onclick = entrarSala;
+$('on-voltar').onclick = () => ir('menu');
+$('on-cancelar').onclick = () => { sairOnline(); mostrarBusca(false); };
+
+/* ---------- confete ---------- */
+function confete() {
+  const cv = $('confete'), ctx = cv.getContext('2d');
+  cv.width = innerWidth; cv.height = innerHeight;
+  const cs = getComputedStyle(document.body);
+  const cores = ['--x', '--o', '--accent', '--win'].map(v => cs.getPropertyValue(v).trim()).concat(['#ffffff']);
+  const ps = Array.from({ length: 150 }, () => ({
+    x: innerWidth / 2, y: innerHeight / 2 - 60,
+    vx: (Math.random() - .5) * 16, vy: Math.random() * -14 - 3,
+    s: 5 + Math.random() * 6, c: cores[Math.floor(Math.random() * cores.length)],
+    r: Math.random() * 6, vr: (Math.random() - .5) * .4
+  }));
+  let frames = 0;
+  (function anim() {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ps.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.vy += .35; p.r += p.vr;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+      ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * .6); ctx.restore();
+    });
+    if (++frames < 130) requestAnimationFrame(anim); else ctx.clearRect(0, 0, cv.width, cv.height);
+  })();
+}
+
+/* ---------- teclado ---------- */
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (!$('jogo').classList.contains('ativa')) return;
+  if (e.key >= '1' && e.key <= '9' && N === 3) {
+    const mapa = { 7: 0, 8: 1, 9: 2, 4: 3, 5: 4, 6: 5, 1: 6, 2: 7, 3: 8 };
+    clique(mapa[e.key]);
+  } else if (e.key === 'r' || e.key === 'R') { if (cfg.modo !== 'online') $('j-novo').click(); }
+  else if (e.key === 'm' || e.key === 'M') { ir('menu'); }
+});
+
+/* ---------- PWA ---------- */
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+}
+</script>
+</body>
+</html>
